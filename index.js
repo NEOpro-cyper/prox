@@ -30,10 +30,20 @@ function shouldRewrite(ct, url) {
 
 function rewrite(text, myHost) {
   const t = config.targetHost;
-  return text
+  let result = text
     .replaceAll(`https://${t}`, `https://${myHost}`)
     .replaceAll(`http://${t}`,  `http://${myHost}`)
     .replaceAll(t,              myHost);
+
+  if (result.includes('#EXTM3U') && !result.includes('#EXT-X-ENDLIST')) {
+    result = result.trimEnd() + '\n#EXT-X-ENDLIST\n';
+  }
+
+  if (result.includes('#EXT-X-PLAYLIST-TYPE:EVENT')) {
+    result = result.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
+  }
+
+  return result;
 }
 
 function json(res, code, data) {
