@@ -133,14 +133,24 @@ const server = http.createServer((req, res) => {
 
     if (isText) {
       const chunks = [];
-      proxyRes.on('data', c => chunks.push(c));
-      proxyRes.on('end', () => {
-        let body = Buffer.concat(chunks).toString('utf8');
-        body = rewrite(body, myHost);
-        respHeaders['content-length'] = Buffer.byteLength(body);
-        res.writeHead(proxyRes.statusCode, respHeaders);
-        res.end(body);
-      });
+     proxyRes.on('end', () => {
+  const raw = Buffer.concat(chunks);
+
+  let body;
+  if (raw[0] === 0xFF && raw[1] === 0xFE) {
+    body = raw.slice(2).toString('utf16le');
+  } else if (raw[0] === 0xFE && raw[1] === 0xFF) {
+    body = raw.swap16().slice(2).toString('utf16le');
+  } else {
+    body = raw.toString('utf8');
+  }
+
+  body = rewrite(body, myHost);
+  respHeaders['content-length'] = Buffer.byteLength(body);
+  respHeaders['content-type'] = 'application/vnd.apple.mpegurl; charset=utf-8';
+  res.writeHead(proxyRes.statusCode, respHeaders);
+  res.end(body);
+});
     } else {
       res.writeHead(proxyRes.statusCode, respHeaders);
       proxyRes.pipe(res);
